@@ -1,9 +1,6 @@
-from keras.layers import Conv2D, MaxPooling2D, \
-    Flatten, Dense, Reshape, LeakyReLU
-from keras.layers.normalization import BatchNormalization
-from keras.regularizers import l2
-from keras.engine.topology import Layer
-import keras.backend as K
+from tensorflow.keras.layers import Layer, Conv2D, MaxPooling2D, Flatten, Dense, Reshape, LeakyReLU, BatchNormalization
+from tensorflow.keras.regularizers import l2
+import tensorflow.keras.backend as K
 
 
 class Yolo_Reshape(Layer):
