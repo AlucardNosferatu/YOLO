@@ -3,8 +3,8 @@ import os
 import cv2 as cv
 import numpy as np
 from models.model_tiny_yolov1 import model_tiny_yolov1
-from keras.engine import Input
-from keras.models import Model
+from tensorflow.keras.layers import Input
+from tensorflow.keras import Model
 
 parser = argparse.ArgumentParser(description='Use Tiny-Yolov1 To Detect Picture.')
 parser.add_argument('weights_path', help='Path to model weights.')
