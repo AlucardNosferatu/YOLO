@@ -1,8 +1,9 @@
 import argparse
-from keras.engine import Input
-from keras.models import Model
-from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
+from tensorflow.keras.layers import Input
+from tensorflow.keras import Model
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 import os
+import tensorflow as tf
 from models.model_tiny_yolov1 import model_tiny_yolov1
 from data_sequence import SequenceData
 from yolo.yolo import yolo_loss
@@ -24,7 +25,15 @@ def _main(args):
 
     model = Model(inputs=inputs, outputs=yolo_outputs)
     model.compile(loss=yolo_loss, optimizer='adam')
-
+    tf.keras.utils.plot_model(
+        model, 
+        to_file='model.png', 
+        show_shapes=True, 
+        show_layer_names=False,
+        rankdir='TB', 
+        expand_nested=False, 
+        dpi=96
+    )
     save_dir = 'checkpoints'
     weights_path = os.path.join(save_dir, 'weights.hdf5')
     checkpoint = ModelCheckpoint(weights_path, monitor='val_loss',
