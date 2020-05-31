@@ -2,7 +2,7 @@ import argparse
 import os
 import cv2 as cv
 import numpy as np
-from models.model_tiny_yolov1 import model_tiny_yolov1
+from models.model_tiny_yolov1 import model_tiny_YOLOv1
 from tensorflow.keras.layers import Input
 from tensorflow.keras import Model
 
@@ -16,7 +16,7 @@ classes_name = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
                 'tvmonitor']
 
 
-class Tiny_Yolov1(object):
+class TinyYOLOv1(object):
 
     def __init__(self, weights_path, input_path):
         self.weights_path = weights_path
@@ -34,7 +34,7 @@ class Tiny_Yolov1(object):
         image = np.reshape(image, input_shape)
         image = image / 255.
         inputs = Input(input_shape[1:4])
-        outputs = model_tiny_yolov1(inputs)
+        outputs = model_tiny_YOLOv1(inputs)
         model = Model(inputs=inputs, outputs=outputs)
         model.load_weights(self.weights_path, by_name=True)
         y = model.predict(image, batch_size=1)
@@ -42,7 +42,7 @@ class Tiny_Yolov1(object):
         return y
 
 
-def yolo_head(feats):
+def YOLO_head(feats):
     # Dynamic implementation of conv dims for fully convolutional model.
     conv_dims = np.shape(feats)[0:2]  # assuming channels last
     # In YOLO the height index is the inner most iteration.
@@ -64,7 +64,7 @@ def yolo_head(feats):
     return box_xy, box_wh
 
 
-def xywh2minmax(xy, wh):
+def X_Y_W_H_To_Min_Max(xy, wh):
     xy_min = xy - wh / 2
     xy_max = xy + wh / 2
 
@@ -92,7 +92,7 @@ def _main(args):
     weights_path = os.path.expanduser(args.weights_path)
     image_path = os.path.expanduser(args.image_path)
 
-    tyv1 = Tiny_Yolov1(weights_path, image_path)
+    tyv1 = TinyYOLOv1(weights_path, image_path)
     prediction = tyv1.predict()
 
     predict_class = prediction[..., :20]  # 1 * 7 * 7 * 20
@@ -122,8 +122,8 @@ def _main(args):
     box_classes = np.expand_dims(box_classes, axis=-1)
     box_classes *= filter_mask  # 7 * 7 * 2 * 1
 
-    box_xy, box_wh = yolo_head(predict_box)  # 7 * 7 * 2 * 2
-    box_xy_min, box_xy_max = xywh2minmax(box_xy, box_wh)  # 7 * 7 * 2 * 2
+    box_xy, box_wh = YOLO_head(predict_box)  # 7 * 7 * 2 * 2
+    box_xy_min, box_xy_max = X_Y_W_H_To_Min_Max(box_xy, box_wh)  # 7 * 7 * 2 * 2
 
     predict_trust *= filter_mask  # 7 * 7 * 2 * 1
     nms_mask = np.zeros_like(filter_mask)  # 7 * 7 * 2 * 1

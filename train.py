@@ -4,7 +4,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 import os
 import tensorflow as tf
-from models.model_tiny_yolov1 import model_tiny_yolov1
+from models.model_tiny_yolov1 import model_tiny_YOLOv1
 from data_sequence import SequenceData
 from yolo.yolo import yolo_loss
 from callback import callback
@@ -21,7 +21,7 @@ def _main(args):
 
     input_shape = (448, 448, 3)
     inputs = Input(input_shape)
-    yolo_outputs = model_tiny_yolov1(inputs)
+    yolo_outputs = model_tiny_YOLOv1(inputs)
 
     model = Model(inputs=inputs, outputs=yolo_outputs)
     model.compile(loss=yolo_loss, optimizer='adam')
@@ -72,18 +72,18 @@ def _main(args):
     # if not os.path.isdir(log_dir):
     #     os.makedirs(log_dir)
 
-    datasets_path = os.path.expanduser(args.datasets_path)
+    data_path = os.path.expanduser(args.datasets_path)
 
     # 数据生成器
     train_generator = SequenceData(
-        'train', datasets_path, input_shape, batch_size)
+        'train', data_path, input_shape, batch_size)
     validation_generator = SequenceData(
-        'val', datasets_path, input_shape, batch_size)
+        'val', data_path, input_shape, batch_size)
 
     model.fit_generator(
         train_generator,
         steps_per_epoch=len(train_generator),
-        epochs=30,
+        epochs=epochs,
         validation_data=validation_generator,
         validation_steps=len(validation_generator),
         # use_multiprocessing=True,

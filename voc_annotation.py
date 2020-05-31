@@ -1,5 +1,5 @@
 import argparse
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ElTr
 import os
 
 parser = argparse.ArgumentParser(description='Build Annotations.')
@@ -13,9 +13,9 @@ classes_num = {'aeroplane': 0, 'bicycle': 1, 'bird': 2, 'boat': 3, 'bottle': 4, 
                'sofa': 17, 'train': 18, 'tvmonitor': 19}
 
 
-def convert_annotation(dir, year, image_id, f):
-    in_file = os.path.join(dir, 'VOC%s/Annotations/%s.xml' % (year, image_id))
-    tree = ET.parse(in_file)
+def convert_annotation(annotation_dir, year, image_id, f):
+    in_file = os.path.join(annotation_dir, 'VOC%s/Annotations/%s.xml' % (year, image_id))
+    tree = ElTr.parse(in_file)
     root = tree.getroot()
 
     for obj in root.iter('object'):
@@ -25,9 +25,9 @@ def convert_annotation(dir, year, image_id, f):
         if cls not in classes or int(difficult) == 1:
             continue
         cls_id = classes.index(cls)
-        xmlbox = obj.find('bndbox')
-        b = (int(xmlbox.find('xmin').text), int(xmlbox.find('ymin').text),
-             int(xmlbox.find('xmax').text), int(xmlbox.find('ymax').text))
+        xml_box = obj.find('bndbox')
+        b = (int(xml_box.find('xmin').text), int(xml_box.find('ymin').text),
+             int(xml_box.find('xmax').text), int(xml_box.find('ymax').text))
         f.write(' ' + ','.join([str(a) for a in b]) + ',' + str(cls_id))
 
 

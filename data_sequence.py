@@ -9,28 +9,28 @@ class SequenceData(Sequence):
 
     def __init__(self, model, dir, target_size, batch_size, shuffle=True):
         self.model = model
-        self.datasets = []
+        self.data_sets = []
         if self.model is 'train':
             with open(os.path.join(dir, '2007_train.txt'), 'r') as f:
-                self.datasets = self.datasets + f.readlines()
+                self.data_sets = self.data_sets + f.readlines()
         elif self.model is 'val':
             with open(os.path.join(dir, '2007_val.txt'), 'r') as f:
-                self.datasets = self.datasets + f.readlines()
+                self.data_sets = self.data_sets + f.readlines()
         self.image_size = target_size[0:2]
         self.batch_size = batch_size
-        self.indexes = np.arange(len(self.datasets))
+        self.indexes = np.arange(len(self.data_sets))
         self.shuffle = shuffle
 
     def __len__(self):
         # 计算每一个epoch的迭代次数
-        num_imgs = len(self.datasets)
+        num_imgs = len(self.data_sets)
         return math.ceil(num_imgs / float(self.batch_size))
 
     def __getitem__(self, idx):
         # 生成batch_size个索引
         batch_indexs = self.indexes[idx * self.batch_size:(idx + 1) * self.batch_size]
         # 根据索引获取datas集合中的数据
-        batch = [self.datasets[k] for k in batch_indexs]
+        batch = [self.data_sets[k] for k in batch_indexs]
         # 生成数据
         X, y = self.data_generation(batch)
         return X, y

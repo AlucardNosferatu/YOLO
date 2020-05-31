@@ -13,7 +13,6 @@ import numpy as np
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, \
     Dense, Flatten, Dropout, Reshape, LeakyReLU, ReLU, BatchNormalization
-
 from tensorflow.keras import Model
 from tensorflow.keras.regularizers import l2
 
