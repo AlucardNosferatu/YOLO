@@ -33,6 +33,11 @@ class ReshapeYOLO(Layer):
         outputs = K.concatenate([class_probability, confidence, boxes])
         return outputs
 
+    def get_config(self):
+        config = {'target_shape': self.target_shape}
+        base_config = super(ReshapeYOLO, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 
 def model_tiny_YOLOv1(inputs):
     x = Conv2D(16, (3, 3), padding='same', name='convolution_0', use_bias=False,

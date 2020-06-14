@@ -41,38 +41,52 @@ class SequenceData(Sequence):
             np.random.shuffle(self.indexes)
 
     def read(self, dataset):
+        # dataset = 'C:\\BaiduNetdiskDownload\\pascalvoc\\VOCdevkit/VOC2007/JPEGImages/000012.jpg 156,97,351,270,6'
         dataset = dataset.strip().split()
+        # dataset = ["图片路径","ROI坐标+标签"]
         image_path = dataset[0]
-        label = dataset[1:]
+        labels = dataset[1:]
 
         image = cv.imread(image_path)
         image = cv.cvtColor(image, cv.COLOR_BGR2RGB)  # opencv读取通道顺序为BGR，所以要转换
         image_h, image_w = image.shape[0:2]
+        # 获取高和宽
         image = cv.resize(image, self.image_size)
+        # 变形到448*448
         image = image / 255.
+        # 像素值归一化
 
         label_matrix = np.zeros([7, 7, 25])
-        for l in label:
-            l = l.split(',')
-            l = np.array(l, dtype=np.int)
-            xmin = l[0]
-            ymin = l[1]
-            xmax = l[2]
-            ymax = l[3]
-            cls = l[4]
+        # 7*7的网格，每格做一次21分类（20种目标+1背景）+4偏移量回归
+        for label in labels:
+            # 遍历同一张图多个目标
+            label = label.split(',')
+            # 坐标和分类以逗号分隔
+            label = np.array(label, dtype=np.int)
+            xmin = label[0]
+            ymin = label[1]
+            xmax = label[2]
+            ymax = label[3]
+            cls = label[4]
             x = (xmin + xmax) / 2 / image_w
             y = (ymin + ymax) / 2 / image_h
+            # 获取归一化中心坐标
             w = (xmax - xmin) / image_w
             h = (ymax - ymin) / image_h
+            # 获取归一化高宽
             loc = [7 * x, 7 * y]
+            # 找到该中心坐标映射到网格图后相对所在网格的偏移量
             loc_i = int(loc[1])
             loc_j = int(loc[0])
             y = loc[1] - loc_i
             x = loc[0] - loc_j
-
+            # 把中心坐标映射到网格图的所在网格打上对应的分类标签
             if label_matrix[loc_i, loc_j, 24] == 0:
+                # 24指背景，如果为1则不处理
                 label_matrix[loc_i, loc_j, cls] = 1
+                # 对应标签类置1(0到第19共20类)
                 label_matrix[loc_i, loc_j, 20:24] = [x, y, w, h]
+                # 第20到第23共四位存储目标框信息（偏移量和高宽）
                 label_matrix[loc_i, loc_j, 24] = 1  # response
 
         return image, label_matrix

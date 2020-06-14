@@ -111,7 +111,7 @@ def _main(args):
 
     box_mask = box_class_scores >= best_box_class_scores  # ? * 7 * 7 * 2
 
-    filter_mask = box_class_scores >= 0.6  # 7 * 7 * 2
+    filter_mask = box_class_scores >= np.max(box_class_scores) / 2  # 7 * 7 * 2
     filter_mask *= box_mask  # 7 * 7 * 2
 
     filter_mask = np.expand_dims(filter_mask, axis=-1)  # 7 * 7 * 2 * 1
@@ -173,9 +173,20 @@ def _main(args):
 
     image = cv.resize(image, (origin_shape[1], origin_shape[0]))
     cv.imshow('image', image)
+    cv.imwrite('YOLOv1-' + image_path.split("\\")[-1], image)
     cv.waitKey(0)
 
 
 if __name__ == '__main__':
-    _main(parser.parse_args())
+    # _main(parser.parse_args())
     # _main(parser.parse_args(['my-tiny-yolov1.hdf5', 'C:/Users/JY/Desktop/test.jpg']))
+    path = 'C:\\BaiduNetdiskDownload\\pascalvoc\\VOCdevkit\\VOC2007\\JPEGImages'
+    for e, i in enumerate(os.listdir(path)):
+        _main(
+            parser.parse_args(
+                [
+                    'my-tiny-yolov1.hdf5',
+                    os.path.join(path, i)
+                ]
+            )
+        )

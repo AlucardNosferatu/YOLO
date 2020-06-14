@@ -4,7 +4,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 import os
 import tensorflow as tf
-from models.model_tiny_yolov1 import model_tiny_YOLOv1
+from models.model_tiny_yolov1 import model_tiny_YOLOv1, ReshapeYOLO
 from data_sequence import SequenceData
 from yolo.yolo import yolo_loss
 from callback import callback
@@ -26,23 +26,35 @@ def _main(args):
     model = Model(inputs=inputs, outputs=yolo_outputs)
     model.compile(loss=yolo_loss, optimizer='adam')
     tf.keras.utils.plot_model(
-        model, 
-        to_file='model.png', 
-        show_shapes=True, 
+        model,
+        to_file='model.png',
+        show_shapes=True,
         show_layer_names=False,
-        rankdir='TB', 
-        expand_nested=False, 
+        rankdir='TB',
+        expand_nested=False,
         dpi=96
     )
     save_dir = 'checkpoints'
     weights_path = os.path.join(save_dir, 'weights.hdf5')
-    checkpoint = ModelCheckpoint(weights_path, monitor='val_loss',
-                                 save_weights_only=True, save_best_only=True)
+    checkpoint = ModelCheckpoint(
+        weights_path,
+        monitor='val_loss',
+        verbose=1,
+        save_weights_only=False,
+        save_best_only=True
+    )
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
-    if os.path.exists('checkpoints/weights.hdf5'):
-        model.load_weights('checkpoints/weights.hdf5', by_name=True)
+    if os.path.exists(weights_path):
+        # model.load_weights(weights_path, by_name=True)
+        model = tf.keras.models.load_model(
+            weights_path,
+            custom_objects={
+                "ReshapeYOLO": ReshapeYOLO,
+                "yolo_loss": yolo_loss
+            }
+        )
     else:
         model.load_weights('tiny-yolov1.hdf5', by_name=True)
         print('no train history')
@@ -79,20 +91,22 @@ def _main(args):
         'train', data_path, input_shape, batch_size)
     validation_generator = SequenceData(
         'val', data_path, input_shape, batch_size)
-
-    model.fit_generator(
-        train_generator,
-        steps_per_epoch=len(train_generator),
-        epochs=epochs,
-        validation_data=validation_generator,
-        validation_steps=len(validation_generator),
-        # use_multiprocessing=True,
-        workers=4,
-        callbacks=[checkpoint, early_stopping]
-    )
+    with tf.device('/gpu:0'):
+        model.fit_generator(
+            train_generator,
+            steps_per_epoch=len(train_generator),
+            epochs=epochs,
+            validation_data=validation_generator,
+            validation_steps=len(validation_generator),
+            # use_multiprocessing=True,
+            workers=4,
+            callbacks=[checkpoint, early_stopping],
+            verbose=1
+        )
     model.save_weights('my-tiny-yolov1.hdf5')
 
 
 if __name__ == '__main__':
-    _main(parser.parse_args())
+    # _main(parser.parse_args())
     # _main(parser.parse_args(['30', '32', 'D:/Datasets/VOC/VOCdevkit']))
+    _main(parser.parse_args(['2', '32', 'C:\\BaiduNetdiskDownload\\pascalvoc\\VOCdevkit']))

@@ -1,6 +1,5 @@
 import tensorflow.keras.backend as K
 
-
 def xywh2minmax(xy, wh):
     xy_min = xy - wh / 2
     xy_max = xy + wh / 2
@@ -51,6 +50,7 @@ def yolo_head(feats):
 
 
 def yolo_loss(y_true, y_pred):
+
     label_class = y_true[..., :20]  # ? * 7 * 7 * 20
     label_box = y_true[..., 20:24]  # ? * 7 * 7 * 4
     response_mask = y_true[..., 24]  # ? * 7 * 7
