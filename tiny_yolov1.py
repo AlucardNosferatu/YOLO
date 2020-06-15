@@ -6,6 +6,8 @@ from models.model_tiny_yolov1 import model_tiny_YOLOv1
 from tensorflow.keras.layers import Input
 from tensorflow.keras import Model
 
+from utils import load_img
+
 parser = argparse.ArgumentParser(description='Use Tiny-Yolov1 To Detect Picture.')
 parser.add_argument('weights_path', help='Path to model weights.')
 parser.add_argument('image_path', help='Path to detect image.')
@@ -27,16 +29,12 @@ class TinyYOLOv1(object):
                              'tvmonitor']
 
     def predict(self):
-        image = cv.imread(self.input_path)
-        input_shape = (1, 448, 448, 3)
-        image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
-        image = cv.resize(image, input_shape[1:3])
-        image = np.reshape(image, input_shape)
-        image = image / 255.
-        inputs = Input(input_shape[1:4])
-        outputs = model_tiny_YOLOv1(inputs)
+        outputs, inputs = model_tiny_YOLOv1()
         model = Model(inputs=inputs, outputs=outputs)
         model.load_weights(self.weights_path, by_name=True)
+
+        image, _, _ = load_img(path=self.input_path, shape=inputs.shape[1:])
+        image = np.expand_dims(image, axis=0)
         y = model.predict(image, batch_size=1)
 
         return y

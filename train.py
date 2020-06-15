@@ -2,6 +2,7 @@ import argparse
 from tensorflow.keras.layers import Input
 from tensorflow.keras import Model
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
+from tensorflow.keras.optimizers import Adam
 import os
 import tensorflow as tf
 from models.model_tiny_yolov1 import model_tiny_YOLOv1, ReshapeYOLO
@@ -18,22 +19,19 @@ parser.add_argument('datasets_path', help='Path to datasets.')
 def _main(args):
     epochs = int(os.path.expanduser(args.epochs))
     batch_size = int(os.path.expanduser(args.batch_size))
-
-    input_shape = (448, 448, 3)
-    inputs = Input(input_shape)
-    yolo_outputs = model_tiny_YOLOv1(inputs)
-
-    model = Model(inputs=inputs, outputs=yolo_outputs)
+    outputs, inputs = model_tiny_YOLOv1()
+    input_shape = tuple(inputs.shape[1:])
+    model = Model(inputs=inputs, outputs=outputs)
     model.compile(loss=yolo_loss, optimizer='adam')
-    tf.keras.utils.plot_model(
-        model,
-        to_file='model.png',
-        show_shapes=True,
-        show_layer_names=False,
-        rankdir='TB',
-        expand_nested=False,
-        dpi=96
-    )
+    # tf.keras.utils.plot_model(
+    #     model,
+    #     to_file='model.png',
+    #     show_shapes=True,
+    #     show_layer_names=False,
+    #     rankdir='TB',
+    #     expand_nested=False,
+    #     dpi=96
+    # )
     save_dir = 'checkpoints'
     weights_path = os.path.join(save_dir, 'weights.hdf5')
     checkpoint = ModelCheckpoint(
@@ -58,7 +56,8 @@ def _main(args):
     else:
         model.load_weights('tiny-yolov1.hdf5', by_name=True)
         print('no train history')
-
+    opt = Adam(lr=0.001)
+    model.compile(loss=yolo_loss, optimizer=opt)
     # epoch_file_path = 'checkpoints/epoch.txt'
     # try:
     #     with open(epoch_file_path, 'r') as f:
@@ -109,4 +108,4 @@ def _main(args):
 if __name__ == '__main__':
     # _main(parser.parse_args())
     # _main(parser.parse_args(['30', '32', 'D:/Datasets/VOC/VOCdevkit']))
-    _main(parser.parse_args(['2', '32', 'C:\\BaiduNetdiskDownload\\pascalvoc\\VOCdevkit']))
+    _main(parser.parse_args(['1', '32', 'C:\\BaiduNetdiskDownload\\pascalvoc\\VOCdevkit']))

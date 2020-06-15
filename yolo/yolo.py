@@ -1,6 +1,7 @@
 import tensorflow.keras.backend as K
 
-def xywh2minmax(xy, wh):
+
+def x_y_w_h_2_min_max(xy, wh):
     xy_min = xy - wh / 2
     xy_max = xy + wh / 2
 
@@ -50,15 +51,20 @@ def yolo_head(feats):
 
 
 def yolo_loss(y_true, y_pred):
-
     label_class = y_true[..., :20]  # ? * 7 * 7 * 20
+    # 分类
     label_box = y_true[..., 20:24]  # ? * 7 * 7 * 4
+    # BB1的坐标
     response_mask = y_true[..., 24]  # ? * 7 * 7
+    # BB1的置信度
     response_mask = K.expand_dims(response_mask)  # ? * 7 * 7 * 1
 
     predict_class = y_pred[..., :20]  # ? * 7 * 7 * 20
+    # 分类
     predict_trust = y_pred[..., 20:22]  # ? * 7 * 7 * 2
+    # BB1和BB2的置信度
     predict_box = y_pred[..., 22:]  # ? * 7 * 7 * 8
+    # BB1和BB2的坐标
 
     _label_box = K.reshape(label_box, [-1, 7, 7, 1, 4])
     _predict_box = K.reshape(predict_box, [-1, 7, 7, 2, 4])
@@ -66,12 +72,12 @@ def yolo_loss(y_true, y_pred):
     label_xy, label_wh = yolo_head(_label_box)  # ? * 7 * 7 * 1 * 2, ? * 7 * 7 * 1 * 2
     label_xy = K.expand_dims(label_xy, 3)  # ? * 7 * 7 * 1 * 1 * 2
     label_wh = K.expand_dims(label_wh, 3)  # ? * 7 * 7 * 1 * 1 * 2
-    label_xy_min, label_xy_max = xywh2minmax(label_xy, label_wh)  # ? * 7 * 7 * 1 * 1 * 2, ? * 7 * 7 * 1 * 1 * 2
+    label_xy_min, label_xy_max = x_y_w_h_2_min_max(label_xy, label_wh)  # ? * 7 * 7 * 1 * 1 * 2, ? * 7 * 7 * 1 * 1 * 2
 
     predict_xy, predict_wh = yolo_head(_predict_box)  # ? * 7 * 7 * 2 * 2, ? * 7 * 7 * 2 * 2
     predict_xy = K.expand_dims(predict_xy, 4)  # ? * 7 * 7 * 2 * 1 * 2
     predict_wh = K.expand_dims(predict_wh, 4)  # ? * 7 * 7 * 2 * 1 * 2
-    predict_xy_min, predict_xy_max = xywh2minmax(predict_xy, predict_wh)  # ? * 7 * 7 * 2 * 1 * 2, ? * 7 * 7 * 2 * 1 * 2
+    predict_xy_min, predict_xy_max = x_y_w_h_2_min_max(predict_xy, predict_wh)  # ? * 7 * 7 * 2 * 1 * 2, ? * 7 * 7 * 2 * 1 * 2
 
     iou_scores = iou(predict_xy_min, predict_xy_max, label_xy_min, label_xy_max)  # ? * 7 * 7 * 2 * 1
     best_ious = K.max(iou_scores, axis=4)  # ? * 7 * 7 * 2

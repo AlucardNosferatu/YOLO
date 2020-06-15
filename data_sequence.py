@@ -4,6 +4,8 @@ import cv2 as cv
 import numpy as np
 import os
 
+from utils import load_img
+
 
 class SequenceData(Sequence):
 
@@ -47,14 +49,7 @@ class SequenceData(Sequence):
         image_path = dataset[0]
         labels = dataset[1:]
 
-        image = cv.imread(image_path)
-        image = cv.cvtColor(image, cv.COLOR_BGR2RGB)  # opencv读取通道顺序为BGR，所以要转换
-        image_h, image_w = image.shape[0:2]
-        # 获取高和宽
-        image = cv.resize(image, self.image_size)
-        # 变形到448*448
-        image = image / 255.
-        # 像素值归一化
+        image, image_h, image_w = load_img(path=image_path, shape=self.image_size)
 
         label_matrix = np.zeros([7, 7, 25])
         # 7*7的网格，每格做一次21分类（20种目标+1背景）+4偏移量回归
@@ -82,12 +77,13 @@ class SequenceData(Sequence):
             x = loc[0] - loc_j
             # 把中心坐标映射到网格图的所在网格打上对应的分类标签
             if label_matrix[loc_i, loc_j, 24] == 0:
-                # 24指背景，如果为1则不处理
+                # 24位为置信度，如果为1表明已有目标由此方格负责预测，则不做进一步处理
                 label_matrix[loc_i, loc_j, cls] = 1
                 # 对应标签类置1(0到第19共20类)
                 label_matrix[loc_i, loc_j, 20:24] = [x, y, w, h]
                 # 第20到第23共四位存储目标框信息（偏移量和高宽）
-                label_matrix[loc_i, loc_j, 24] = 1  # response
+                label_matrix[loc_i, loc_j, 24] = 1
+                # 第24位存储置信度，有目标为1，无目标为0
 
         return image, label_matrix
 
@@ -102,5 +98,10 @@ class SequenceData(Sequence):
 
         X = np.array(images)
         y = np.array(labels)
+
+        # print(
+        #     "Person类占该batch总目标个数比例：",
+        #     np.count_nonzero(y[:, :, :, 14]) / np.count_nonzero(y[:, :, :, 0:20])
+        # )
 
         return X, y

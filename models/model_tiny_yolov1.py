@@ -1,6 +1,6 @@
-from tensorflow.keras.layers import Layer, Conv2D, MaxPooling2D, Flatten, Dense, Reshape, LeakyReLU, BatchNormalization
-from tensorflow.keras.regularizers import l2
 import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Layer, Conv2D, MaxPooling2D, Flatten, Dense, LeakyReLU, BatchNormalization, Input
+from tensorflow.keras.regularizers import l2
 
 
 class ReshapeYOLO(Layer):
@@ -39,7 +39,7 @@ class ReshapeYOLO(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-def model_tiny_YOLOv1(inputs):
+def original_backbone_network(inputs):
     x = Conv2D(16, (3, 3), padding='same', name='convolution_0', use_bias=False,
                kernel_regularizer=l2(5e-4), trainable=False)(inputs)
     x = BatchNormalization(name='bn_convolution_0', trainable=False)(x)
@@ -87,8 +87,13 @@ def model_tiny_YOLOv1(inputs):
     x = LeakyReLU(alpha=0.1)(x)
 
     x = Flatten()(x)
+    return x
+
+
+def model_tiny_YOLOv1():
+    inputs = Input((448, 448, 3))
+    x = original_backbone_network(inputs)
     x = Dense(1470, activation='linear', name='connected_0')(x)
     # outputs = Reshape((7, 7, 30))(x)
     outputs = ReshapeYOLO((7, 7, 30))(x)
-
-    return outputs
+    return outputs, inputs
