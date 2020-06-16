@@ -72,12 +72,12 @@ def yolo_loss(y_true, y_pred):
     box_loss = 5 * box_mask * response_mask * K.square((label_xy - predict_xy) / image_size)
     box_loss += 5 * box_mask * response_mask * K.square((K.sqrt(label_wh) - K.sqrt(predict_wh)) / image_size)
     box_loss = K.sum(box_loss)
-    K.print_tensor("Conf Loss")
-    K.print_tensor(confidence_loss)
-    K.print_tensor("Class Loss")
-    K.print_tensor(class_loss)
-    K.print_tensor("Box Loss")
-    K.print_tensor(box_loss)
+    # K.print_tensor("Conf Loss")
+    # K.print_tensor(confidence_loss)
+    # K.print_tensor("Class Loss")
+    # K.print_tensor(class_loss)
+    # K.print_tensor("Box Loss")
+    # K.print_tensor(box_loss)
     loss = confidence_loss + class_loss + box_loss
 
     return loss
