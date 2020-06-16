@@ -14,3 +14,10 @@ def load_img(path, shape=(448, 448, 3)):
     image = np.reshape(image, shape)
     image = image / 255.
     return image, image_h, image_w
+
+
+def X_Y_W_H_To_Min_Max(xy, wh):
+    xy_min = xy - wh / 2
+    xy_max = xy + wh / 2
+
+    return xy_min, xy_max

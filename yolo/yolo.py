@@ -1,11 +1,6 @@
 import tensorflow.keras.backend as K
 
-
-def x_y_w_h_2_min_max(xy, wh):
-    xy_min = xy - wh / 2
-    xy_max = xy + wh / 2
-
-    return xy_min, xy_max
+from utils import X_Y_W_H_To_Min_Max
 
 
 def iou(pred_mins, pred_maxes, true_mins, true_maxes):
@@ -72,12 +67,13 @@ def yolo_loss(y_true, y_pred):
     label_xy, label_wh = yolo_head(_label_box)  # ? * 7 * 7 * 1 * 2, ? * 7 * 7 * 1 * 2
     label_xy = K.expand_dims(label_xy, 3)  # ? * 7 * 7 * 1 * 1 * 2
     label_wh = K.expand_dims(label_wh, 3)  # ? * 7 * 7 * 1 * 1 * 2
-    label_xy_min, label_xy_max = x_y_w_h_2_min_max(label_xy, label_wh)  # ? * 7 * 7 * 1 * 1 * 2, ? * 7 * 7 * 1 * 1 * 2
+    label_xy_min, label_xy_max = X_Y_W_H_To_Min_Max(label_xy, label_wh)  # ? * 7 * 7 * 1 * 1 * 2, ? * 7 * 7 * 1 * 1 * 2
 
     predict_xy, predict_wh = yolo_head(_predict_box)  # ? * 7 * 7 * 2 * 2, ? * 7 * 7 * 2 * 2
     predict_xy = K.expand_dims(predict_xy, 4)  # ? * 7 * 7 * 2 * 1 * 2
     predict_wh = K.expand_dims(predict_wh, 4)  # ? * 7 * 7 * 2 * 1 * 2
-    predict_xy_min, predict_xy_max = x_y_w_h_2_min_max(predict_xy, predict_wh)  # ? * 7 * 7 * 2 * 1 * 2, ? * 7 * 7 * 2 * 1 * 2
+    predict_xy_min, predict_xy_max = X_Y_W_H_To_Min_Max(predict_xy,
+                                                       predict_wh)  # ? * 7 * 7 * 2 * 1 * 2, ? * 7 * 7 * 2 * 1 * 2
 
     iou_scores = iou(predict_xy_min, predict_xy_max, label_xy_min, label_xy_max)  # ? * 7 * 7 * 2 * 1
     best_ious = K.max(iou_scores, axis=4)  # ? * 7 * 7 * 2

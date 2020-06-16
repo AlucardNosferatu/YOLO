@@ -1,75 +1,29 @@
-import os
 import argparse
-import cv2 as cv
+import os
+import cv2
 import numpy as np
 from tensorflow.keras import Model
-from utils import load_img, X_Y_W_H_To_Min_Max
-from models.model_tiny_yolov1 import model_tiny_YOLOv1
+from tiny_yolov1 import YOLO_head, iou
+from trainAirplane import model_tiny_YOLOv1
+from utils import X_Y_W_H_To_Min_Max, load_img
 
-classes_name = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
-                'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
-                'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
-                'tvmonitor']
+classes_name = ['aeroplane']
 
 
 class TinyYOLOv1(object):
     def __init__(self, weights_path, input_path):
         self.weights_path = weights_path
         self.input_path = input_path
-        self.classes_name = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
-                             'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
-                             'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
-                             'tvmonitor']
+        self.classes_name = ['aeroplane']
 
     def predict(self):
         outputs, inputs = model_tiny_YOLOv1()
         model = Model(inputs=inputs, outputs=outputs)
         model.load_weights(self.weights_path, by_name=True)
-
         image, _, _ = load_img(path=self.input_path, shape=inputs.shape[1:])
         image = np.expand_dims(image, axis=0)
         y = model.predict(image, batch_size=1)
-
         return y
-
-
-def YOLO_head(feats):
-    # Dynamic implementation of conv dims for fully convolutional model.
-    conv_dims = np.shape(feats)[0:2]  # assuming channels last
-    # In YOLO the height index is the inner most iteration.
-    conv_height_index = np.arange(0, stop=conv_dims[0])
-    conv_width_index = np.arange(0, stop=conv_dims[1])
-    conv_height_index = np.tile(conv_height_index, [conv_dims[1]])
-
-    # TODO: Repeat_elements and tf.split doesn't support dynamic splits.
-    conv_width_index = np.tile(np.expand_dims(conv_width_index, 0), [conv_dims[0], 1])
-    conv_width_index = np.reshape(np.transpose(conv_width_index), [conv_dims[0] * conv_dims[1]])
-    conv_index = np.transpose(np.stack([conv_height_index, conv_width_index]))
-    conv_index = np.reshape(conv_index, [conv_dims[0], conv_dims[1], 1, 2])
-
-    conv_dims = np.reshape(conv_dims, [1, 1, 1, 2])
-
-    box_xy = (feats[..., :2] + conv_index) / conv_dims * 448
-    box_wh = feats[..., 2:4] * 448
-
-    return box_xy, box_wh
-
-
-def iou(pred_mins, pred_maxes, true_mins, true_maxes):
-    intersect_mins = np.maximum(pred_mins, true_mins)
-    intersect_maxes = np.minimum(pred_maxes, true_maxes)
-    intersect_wh = np.maximum(intersect_maxes - intersect_mins, 0.)
-    intersect_areas = intersect_wh[..., 0] * intersect_wh[..., 1]
-
-    pred_wh = pred_maxes - pred_mins
-    true_wh = true_maxes - true_mins
-    pred_areas = pred_wh[..., 0] * pred_wh[..., 1]
-    true_areas = true_wh[..., 0] * true_wh[..., 1]
-
-    union_areas = pred_areas + true_areas - intersect_areas
-    iou_scores = intersect_areas / union_areas
-
-    return iou_scores
 
 
 def _main(args):
@@ -79,15 +33,15 @@ def _main(args):
     tyv1 = TinyYOLOv1(weights_path, image_path)
     prediction = tyv1.predict()
 
-    predict_class = prediction[..., :20]  # 1 * 7 * 7 * 20
-    predict_trust = prediction[..., 20:22]  # 1 * 7 * 7 * 2
-    predict_box = prediction[..., 22:]  # 1 * 7 * 7 * 8
+    predict_class = prediction[..., :1]  # 1 * 7 * 7 * 20
+    predict_trust = prediction[..., 1:3]  # 1 * 7 * 7 * 2
+    predict_box = prediction[..., 3:]  # 1 * 7 * 7 * 8
 
-    predict_class = np.reshape(predict_class, [7, 7, 1, 20])
+    predict_class = np.reshape(predict_class, [7, 7, 1, 1])
     predict_trust = np.reshape(predict_trust, [7, 7, 2, 1])
     predict_box = np.reshape(predict_box, [7, 7, 2, 4])
 
-    predict_scores = predict_class * predict_trust  # 7 * 7 * 2 * 20
+    predict_scores = predict_class * predict_trust  # 7 * 7 * 2 * 1
 
     box_classes = np.argmax(predict_scores, axis=-1)  # 7 * 7 * 2
     box_class_scores = np.max(predict_scores, axis=-1)  # 7 * 7 * 2
@@ -139,42 +93,42 @@ def _main(args):
     box_xy_min *= nms_mask
     box_xy_max *= nms_mask
 
-    image = cv.imread(image_path)
+    image = cv2.imread(image_path)
     origin_shape = image.shape[0:2]
-    image = cv.resize(image, (448, 448))
+    image = cv2.resize(image, (448, 448))
     detect_shape = filter_mask.shape
 
     for i in range(detect_shape[0]):
         for j in range(detect_shape[1]):
             for k in range(detect_shape[2]):
                 if nms_mask[i, j, k, 0]:
-                    cv.rectangle(image, (int(box_xy_min[i, j, k, 0]), int(box_xy_min[i, j, k, 1])),
-                                 (int(box_xy_max[i, j, k, 0]), int(box_xy_max[i, j, k, 1])),
-                                 (0, 0, 255))
-                    cv.putText(image, classes_name[box_classes[i, j, k, 0]],
-                               (int(box_xy_min[i, j, k, 0]), int(box_xy_min[i, j, k, 1])),
-                               1, 1, (0, 0, 255))
+                    cv2.rectangle(image, (int(box_xy_min[i, j, k, 0]), int(box_xy_min[i, j, k, 1])),
+                                  (int(box_xy_max[i, j, k, 0]), int(box_xy_max[i, j, k, 1])),
+                                  (0, 0, 255))
+                    cv2.putText(image, classes_name[box_classes[i, j, k, 0]],
+                                (int(box_xy_min[i, j, k, 0]), int(box_xy_min[i, j, k, 1])),
+                                1, 1, (0, 0, 255))
 
-    image = cv.resize(image, (origin_shape[1], origin_shape[0]))
-    cv.imshow('image', image)
-    cv.imwrite('YOLOv1-' + image_path.split("\\")[-1], image)
-    cv.waitKey(0)
+    image = cv2.resize(image, (origin_shape[1], origin_shape[0]))
+    cv2.imshow('image', image)
+    cv2.imwrite('YOLOv1-' + image_path.split("\\")[-1], image)
+    cv2.waitKey(0)
 
 
 if __name__ == '__main__':
     # _main(parser.parse_args())
     # _main(parser.parse_args(['my-tiny-yolov1.hdf5', 'C:/Users/JY/Desktop/test.jpg']))
-
-    path = 'C:\\BaiduNetdiskDownload\\pascalvoc\\VOCdevkit\\VOC2007\\JPEGImages'
     parser = argparse.ArgumentParser(description='Use Tiny-Yolov1 To Detect Picture.')
     parser.add_argument('weights_path', help='Path to model weights.')
     parser.add_argument('image_path', help='Path to detect image.')
+    path = 'Data\\Images'
     for e, i in enumerate(os.listdir(path)):
-        _main(
-            parser.parse_args(
-                [
-                    'my-tiny-yolov1.hdf5',
-                    os.path.join(path, i)
-                ]
+        if i.startswith("airplane"):
+            _main(
+                parser.parse_args(
+                    [
+                        'airplanes-tiny-yolov1.hdf5',
+                        os.path.join(path, i)
+                    ]
+                )
             )
-        )
