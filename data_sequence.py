@@ -1,10 +1,9 @@
-from tensorflow.keras.utils import Sequence
-import math
-import cv2 as cv
-import numpy as np
 import os
-
+import math
+import numpy as np
+import pandas as pd
 from utils import load_img
+from tensorflow.keras.utils import Sequence
 
 
 class SequenceData(Sequence):
@@ -52,7 +51,7 @@ class SequenceData(Sequence):
         image, image_h, image_w = load_img(path=image_path, shape=self.image_size)
 
         label_matrix = np.zeros([7, 7, 25])
-        # 7*7的网格，每格做一次21分类（20种目标+1背景）+4偏移量回归
+        # 7*7的网格，每格做一次20分类（20种目标）+4偏移量回归+1置信度
         for label in labels:
             # 遍历同一张图多个目标
             label = label.split(',')
@@ -108,15 +107,21 @@ class SequenceData(Sequence):
 
 
 class SequenceForAirplanes(Sequence):
-    def __init__(self, model, dir, target_size, batch_size, shuffle=True):
+    def __init__(self, model, annotation, img_dir, target_size, batch_size, shuffle=True):
         self.model = model
         self.data_sets = []
         if self.model is 'train':
-            with open(os.path.join(dir, '2007_train.txt'), 'r') as f:
-                self.data_sets = self.data_sets + f.readlines()
+            for e, i in enumerate(os.listdir(annotation)):
+                if i.startswith("airplane"):
+                    csv_path = os.path.join(annotation, i)
+                    img_path = os.path.join(img_dir, i.replace("csv", "jpg"))
+                    self.data_sets.append({"csv": csv_path, "jpg": img_path})
         elif self.model is 'val':
-            with open(os.path.join(dir, '2007_val.txt'), 'r') as f:
-                self.data_sets = self.data_sets + f.readlines()
+            for e, i in enumerate(os.listdir(annotation)):
+                if i.startswith("4"):
+                    csv_path = os.path.join(annotation, i)
+                    img_path = os.path.join(img_dir, i.replace("csv", "jpg"))
+                    self.data_sets.append({"csv": csv_path, "jpg": img_path})
         self.image_size = target_size[0:2]
         self.batch_size = batch_size
         self.indexes = np.arange(len(self.data_sets))
@@ -142,26 +147,21 @@ class SequenceForAirplanes(Sequence):
             np.random.shuffle(self.indexes)
 
     def read(self, dataset):
-        # dataset = 'C:\\BaiduNetdiskDownload\\pascalvoc\\VOCdevkit/VOC2007/JPEGImages/000012.jpg 156,97,351,270,6'
-        dataset = dataset.strip().split()
-        # dataset = ["图片路径","ROI坐标+标签"]
-        image_path = dataset[0]
-        labels = dataset[1:]
+        csv_path = dataset['csv']
+        jpg_path = dataset['jpg']
 
-        image, image_h, image_w = load_img(path=image_path, shape=self.image_size)
+        image, image_h, image_w = load_img(path=jpg_path, shape=self.image_size)
 
-        label_matrix = np.zeros([7, 7, 25])
-        # 7*7的网格，每格做一次21分类（20种目标+1背景）+4偏移量回归
-        for label in labels:
-            # 遍历同一张图多个目标
-            label = label.split(',')
-            # 坐标和分类以逗号分隔
-            label = np.array(label, dtype=np.int)
-            xmin = label[0]
-            ymin = label[1]
-            xmax = label[2]
-            ymax = label[3]
-            cls = label[4]
+        label_matrix = np.zeros([7, 7, 6])
+        # 7*7的网格，每格做一次1分类（1种目标）+4偏移量回归+1置信度
+        df = pd.read_csv(csv_path)
+
+        for row in df.iterrows():
+            xmin = int(row[1][0].split(" ")[0])
+            ymin = int(row[1][0].split(" ")[1])
+            xmax = int(row[1][0].split(" ")[2])
+            ymax = int(row[1][0].split(" ")[3])
+            cls = 0
             x = (xmin + xmax) / 2 / image_w
             y = (ymin + ymax) / 2 / image_h
             # 获取归一化中心坐标
@@ -175,13 +175,13 @@ class SequenceForAirplanes(Sequence):
             y = loc[1] - loc_i
             x = loc[0] - loc_j
             # 把中心坐标映射到网格图的所在网格打上对应的分类标签
-            if label_matrix[loc_i, loc_j, 24] == 0:
+            if label_matrix[loc_i, loc_j, 5] == 0:
                 # 24位为置信度，如果为1表明已有目标由此方格负责预测，则不做进一步处理
                 label_matrix[loc_i, loc_j, cls] = 1
                 # 对应标签类置1(0到第19共20类)
-                label_matrix[loc_i, loc_j, 20:24] = [x, y, w, h]
+                label_matrix[loc_i, loc_j, 1:5] = [x, y, w, h]
                 # 第20到第23共四位存储目标框信息（偏移量和高宽）
-                label_matrix[loc_i, loc_j, 24] = 1
+                label_matrix[loc_i, loc_j, 5] = 1
                 # 第24位存储置信度，有目标为1，无目标为0
 
         return image, label_matrix

@@ -1,3 +1,4 @@
 *.weights
 *.hdf5
 *.jpg
+Data/Airplanes_Annotations/
