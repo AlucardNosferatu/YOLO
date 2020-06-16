@@ -53,7 +53,6 @@ class ReshapeYOLO(Layer):
         boxes = K.reshape(
             inputs[:, idx2:], (K.shape(inputs)[0],) + tuple([S[0], S[1], B * 4]))
         boxes = K.sigmoid(boxes)
-        # return np.array([class_probability, confidence, boxes])
         outputs = K.concatenate([class_probability, confidence, boxes])
         return outputs
 
@@ -195,7 +194,7 @@ def _main():
             ],
             verbose=1
         )
-    model.save_weights('airplanes-tiny-yolov1.hdf5')
+    model.save('..\\TrainedModels\\airplanes-tiny-yolov1.hdf5')
 
 
 if __name__ == '__main__':
