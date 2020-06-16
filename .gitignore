@@ -3,3 +3,4 @@
 *.jpg
 Data/Airplanes_Annotations/
 TensorBoard/train/
+TensorBoard/validation/
