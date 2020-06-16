@@ -4,7 +4,7 @@ import cv2 as cv
 import numpy as np
 from tensorflow.keras import Model
 from utils import load_img, X_Y_W_H_To_Min_Max
-from models.model_tiny_yolov1 import model_tiny_YOLOv1
+from VOC2007.models.model_tiny_yolov1 import model_tiny_YOLOv1
 
 classes_name = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
                 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',

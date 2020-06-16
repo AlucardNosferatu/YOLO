@@ -1,10 +1,9 @@
-import argparse
 import os
 import cv2
 import numpy as np
 from tensorflow.keras import Model
-from tiny_yolov1 import YOLO_head, iou
-from trainAirplane import model_tiny_YOLOv1
+from VOC2007.tiny_yolov1 import YOLO_head, iou
+from YOLOv1.trainAirplane import model_tiny_YOLOv1
 from utils import X_Y_W_H_To_Min_Max, load_img
 
 classes_name = ['aeroplane']
@@ -112,7 +111,7 @@ def _main(image_path, tiny_YOLO_v1):
 
 
 if __name__ == '__main__':
-    path = 'Data\\Images'
+    path = '../Data/Images'
     tyv1 = TinyYOLOv1('airplanes-tiny-yolov1.hdf5')
     for e, i in enumerate(os.listdir(path)):
         if i.startswith("airplane"):

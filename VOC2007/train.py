@@ -1,14 +1,12 @@
 import argparse
-from tensorflow.keras.layers import Input
 from tensorflow.keras import Model
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.optimizers import Adam
 import os
 import tensorflow as tf
-from models.model_tiny_yolov1 import model_tiny_YOLOv1, ReshapeYOLO
+from VOC2007.models.model_tiny_yolov1 import model_tiny_YOLOv1, ReshapeYOLO
 from data_sequence import SequenceData
-from yolo.yolo import yolo_loss
-from callback import callback
+from VOC2007.yolo.yolo import yolo_loss
 
 parser = argparse.ArgumentParser(description='Train NetWork.')
 parser.add_argument('epochs', help='Num of epochs.')
@@ -32,7 +30,7 @@ def _main(args):
     #     expand_nested=False,
     #     dpi=96
     # )
-    save_dir = 'checkpoints'
+    save_dir = '../checkpoints'
     weights_path = os.path.join(save_dir, 'weights.hdf5')
     checkpoint = ModelCheckpoint(
         weights_path,

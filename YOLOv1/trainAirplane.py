@@ -3,16 +3,15 @@ import os
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Layer, Input, Dense
+from tensorflow.keras.layers import Layer, Dense
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.optimizers import Adam
 
 from data_sequence import SequenceForAirplanes
-from models.model_tiny_yolov1 import original_backbone_network
 from utils import X_Y_W_H_To_Min_Max
-from yolo.yolo import iou, yolo_head
+from VOC2007.yolo.yolo import iou, yolo_head
 
-data_path = "Data"
+data_path = "../Data"
 annotation_path = os.path.join(data_path, "Airplanes_Annotations")
 img_path = os.path.join(data_path, "Images")
 batch_size = 8
@@ -134,14 +133,14 @@ def _main():
     model.compile(loss=yolo_loss, optimizer='adam')
     tf.keras.utils.plot_model(
         model,
-        to_file='model.png',
+        to_file='../model.png',
         show_shapes=True,
         show_layer_names=False,
         rankdir='TB',
         expand_nested=False,
         dpi=96
     )
-    save_dir = 'checkpoints'
+    save_dir = '../checkpoints'
     weights_path = os.path.join(save_dir, 'airplanes-weights.hdf5')
     checkpoint = ModelCheckpoint(
         weights_path,
@@ -170,7 +169,7 @@ def _main():
     early_stopping = EarlyStopping(
         monitor='val_loss', min_delta=0, patience=15, verbose=1, mode='auto')
     tb_callback = tf.keras.callbacks.TensorBoard(
-        log_dir="TensorBoard",
+        log_dir="../TensorBoard",
         histogram_freq=1,
         write_graph=True,
         write_images=True
