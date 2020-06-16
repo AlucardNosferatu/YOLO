@@ -11,27 +11,23 @@ classes_name = ['aeroplane']
 
 
 class TinyYOLOv1(object):
-    def __init__(self, weights_path, input_path):
+    def __init__(self, weights_path):
         self.weights_path = weights_path
-        self.input_path = input_path
         self.classes_name = ['aeroplane']
-
-    def predict(self):
         outputs, inputs = model_tiny_YOLOv1()
-        model = Model(inputs=inputs, outputs=outputs)
-        model.load_weights(self.weights_path, by_name=True)
-        image, _, _ = load_img(path=self.input_path, shape=inputs.shape[1:])
+        self.model = Model(inputs=inputs, outputs=outputs)
+        self.model.load_weights(self.weights_path, by_name=True)
+        self.inputs = inputs
+
+    def predict(self, input_path):
+        image, _, _ = load_img(path=input_path, shape=self.inputs.shape[1:])
         image = np.expand_dims(image, axis=0)
-        y = model.predict(image, batch_size=1)
+        y = self.model.predict(image, batch_size=1)
         return y
 
 
-def _main(args):
-    weights_path = os.path.expanduser(args.weights_path)
-    image_path = os.path.expanduser(args.image_path)
-
-    tyv1 = TinyYOLOv1(weights_path, image_path)
-    prediction = tyv1.predict()
+def _main(image_path, tiny_YOLO_v1):
+    prediction = tiny_YOLO_v1.predict(image_path)
 
     predict_class = prediction[..., :1]  # 1 * 7 * 7 * 20
     predict_trust = prediction[..., 1:3]  # 1 * 7 * 7 * 2
@@ -60,7 +56,7 @@ def _main(args):
     box_classes = np.expand_dims(box_classes, axis=-1)
     box_classes *= filter_mask  # 7 * 7 * 2 * 1
 
-    box_xy, box_wh = YOLO_head(predict_box)  # 7 * 7 * 2 * 2
+    box_xy, box_wh = YOLO_head(predict_box, img_size=224)  # 7 * 7 * 2 * 2
     box_xy_min, box_xy_max = X_Y_W_H_To_Min_Max(box_xy, box_wh)  # 7 * 7 * 2 * 2
 
     predict_trust *= filter_mask  # 7 * 7 * 2 * 1
@@ -95,7 +91,7 @@ def _main(args):
 
     image = cv2.imread(image_path)
     origin_shape = image.shape[0:2]
-    image = cv2.resize(image, (448, 448))
+    image = cv2.resize(image, (224, 224))
     detect_shape = filter_mask.shape
 
     for i in range(detect_shape[0]):
@@ -116,19 +112,11 @@ def _main(args):
 
 
 if __name__ == '__main__':
-    # _main(parser.parse_args())
-    # _main(parser.parse_args(['my-tiny-yolov1.hdf5', 'C:/Users/JY/Desktop/test.jpg']))
-    parser = argparse.ArgumentParser(description='Use Tiny-Yolov1 To Detect Picture.')
-    parser.add_argument('weights_path', help='Path to model weights.')
-    parser.add_argument('image_path', help='Path to detect image.')
     path = 'Data\\Images'
+    tyv1 = TinyYOLOv1('airplanes-tiny-yolov1.hdf5')
     for e, i in enumerate(os.listdir(path)):
         if i.startswith("airplane"):
             _main(
-                parser.parse_args(
-                    [
-                        'airplanes-tiny-yolov1.hdf5',
-                        os.path.join(path, i)
-                    ]
-                )
+                image_path=os.path.join(path, i),
+                tiny_YOLO_v1=tyv1
             )

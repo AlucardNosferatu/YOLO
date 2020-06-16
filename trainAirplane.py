@@ -83,13 +83,13 @@ def yolo_loss(y_true, y_pred):
     _label_box = K.reshape(label_box, [-1, 7, 7, 1, 4])
     _predict_box = K.reshape(predict_box, [-1, 7, 7, 2, 4])
 
-    label_xy, label_wh = yolo_head(_label_box)  # ? * 7 * 7 * 1 * 2, ? * 7 * 7 * 1 * 2
+    label_xy, label_wh = yolo_head(_label_box, img_size=224)  # ? * 7 * 7 * 1 * 2, ? * 7 * 7 * 1 * 2
     label_xy = K.expand_dims(label_xy, 3)  # ? * 7 * 7 * 1 * 1 * 2
     label_wh = K.expand_dims(label_wh, 3)  # ? * 7 * 7 * 1 * 1 * 2
     label_xy_min, label_xy_max = X_Y_W_H_To_Min_Max(label_xy,
                                                     label_wh)  # ? * 7 * 7 * 1 * 1 * 2, ? * 7 * 7 * 1 * 1 * 2
 
-    predict_xy, predict_wh = yolo_head(_predict_box)  # ? * 7 * 7 * 2 * 2, ? * 7 * 7 * 2 * 2
+    predict_xy, predict_wh = yolo_head(_predict_box, img_size=224)  # ? * 7 * 7 * 2 * 2, ? * 7 * 7 * 2 * 2
     predict_xy = K.expand_dims(predict_xy, 4)  # ? * 7 * 7 * 2 * 1 * 2
     predict_wh = K.expand_dims(predict_wh, 4)  # ? * 7 * 7 * 2 * 1 * 2
     predict_xy_min, predict_xy_max = X_Y_W_H_To_Min_Max(predict_xy,
@@ -112,14 +112,14 @@ def yolo_loss(y_true, y_pred):
     _label_box = K.reshape(label_box, [-1, 7, 7, 1, 4])
     _predict_box = K.reshape(predict_box, [-1, 7, 7, 2, 4])
 
-    label_xy, label_wh = yolo_head(_label_box)  # ? * 7 * 7 * 1 * 2, ? * 7 * 7 * 1 * 2
-    predict_xy, predict_wh = yolo_head(_predict_box)  # ? * 7 * 7 * 2 * 2, ? * 7 * 7 * 2 * 2
+    label_xy, label_wh = yolo_head(_label_box, img_size=224)  # ? * 7 * 7 * 1 * 2, ? * 7 * 7 * 1 * 2
+    predict_xy, predict_wh = yolo_head(_predict_box, img_size=224)  # ? * 7 * 7 * 2 * 2, ? * 7 * 7 * 2 * 2
 
     box_mask = K.expand_dims(box_mask)
     response_mask = K.expand_dims(response_mask)
 
-    box_loss = 5 * box_mask * response_mask * K.square((label_xy - predict_xy) / 448)
-    box_loss += 5 * box_mask * response_mask * K.square((K.sqrt(label_wh) - K.sqrt(predict_wh)) / 448)
+    box_loss = 5 * box_mask * response_mask * K.square((label_xy - predict_xy) / 224)
+    box_loss += 5 * box_mask * response_mask * K.square((K.sqrt(label_wh) - K.sqrt(predict_wh)) / 224)
     box_loss = K.sum(box_loss)
 
     loss = confidence_loss + class_loss + box_loss

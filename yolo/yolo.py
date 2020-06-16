@@ -20,7 +20,7 @@ def iou(pred_mins, pred_maxes, true_mins, true_maxes):
     return iou_scores
 
 
-def yolo_head(feats):
+def yolo_head(feats, img_size=448):
     # Dynamic implementation of conv dims for fully convolutional model.
     conv_dims = K.shape(feats)[1:3]  # assuming channels last
     # In YOLO the height index is the inner most iteration.
@@ -39,8 +39,8 @@ def yolo_head(feats):
 
     conv_dims = K.cast(K.reshape(conv_dims, [1, 1, 1, 1, 2]), K.dtype(feats))
 
-    box_xy = (feats[..., :2] + conv_index) / conv_dims * 448
-    box_wh = feats[..., 2:4] * 448
+    box_xy = (feats[..., :2] + conv_index) / conv_dims * img_size
+    box_wh = feats[..., 2:4] * img_size
 
     return box_xy, box_wh
 
@@ -73,7 +73,7 @@ def yolo_loss(y_true, y_pred):
     predict_xy = K.expand_dims(predict_xy, 4)  # ? * 7 * 7 * 2 * 1 * 2
     predict_wh = K.expand_dims(predict_wh, 4)  # ? * 7 * 7 * 2 * 1 * 2
     predict_xy_min, predict_xy_max = X_Y_W_H_To_Min_Max(predict_xy,
-                                                       predict_wh)  # ? * 7 * 7 * 2 * 1 * 2, ? * 7 * 7 * 2 * 1 * 2
+                                                        predict_wh)  # ? * 7 * 7 * 2 * 1 * 2, ? * 7 * 7 * 2 * 1 * 2
 
     iou_scores = iou(predict_xy_min, predict_xy_max, label_xy_min, label_xy_max)  # ? * 7 * 7 * 2 * 1
     best_ious = K.max(iou_scores, axis=4)  # ? * 7 * 7 * 2

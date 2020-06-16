@@ -33,7 +33,7 @@ class TinyYOLOv1(object):
         return y
 
 
-def YOLO_head(feats):
+def YOLO_head(feats, img_size=448):
     # Dynamic implementation of conv dims for fully convolutional model.
     conv_dims = np.shape(feats)[0:2]  # assuming channels last
     # In YOLO the height index is the inner most iteration.
@@ -49,8 +49,8 @@ def YOLO_head(feats):
 
     conv_dims = np.reshape(conv_dims, [1, 1, 1, 2])
 
-    box_xy = (feats[..., :2] + conv_index) / conv_dims * 448
-    box_wh = feats[..., 2:4] * 448
+    box_xy = (feats[..., :2] + conv_index) / conv_dims * img_size
+    box_wh = feats[..., 2:4] * img_size
 
     return box_xy, box_wh
 
