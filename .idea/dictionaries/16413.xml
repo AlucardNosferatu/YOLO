@@ -4,6 +4,7 @@
       <w>bndbox</w>
       <w>diningtable</w>
       <w>pottedplant</w>
+      <w>softmax</w>
       <w>tvmonitor</w>
       <w>xmax</w>
       <w>xmin</w>

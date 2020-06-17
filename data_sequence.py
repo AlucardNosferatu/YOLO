@@ -107,7 +107,7 @@ class SequenceData(Sequence):
 
 
 class SequenceForAirplanes(Sequence):
-    def __init__(self, model, annotation, img_dir, target_size, batch_size, shuffle=True):
+    def __init__(self, model, annotation, img_dir, target_size, batch_size, shuffle=False):
         self.model = model
         self.data_sets = []
         if self.model is 'train':
@@ -137,7 +137,7 @@ class SequenceForAirplanes(Sequence):
         batch_indexs = self.indexes[idx * self.batch_size:(idx + 1) * self.batch_size]
         # 根据索引获取datas集合中的数据
         batch = [self.data_sets[k] for k in batch_indexs]
-        # 生成数据
+            # 生成数据
         X, y = self.data_generation(batch)
         return X, y
 
@@ -147,12 +147,13 @@ class SequenceForAirplanes(Sequence):
             np.random.shuffle(self.indexes)
 
     def read(self, dataset):
+        fm_size = 28
         csv_path = dataset['csv']
         jpg_path = dataset['jpg']
 
         image, image_h, image_w = load_img(path=jpg_path, shape=self.image_size)
 
-        label_matrix = np.zeros([7, 7, 6])
+        label_matrix = np.zeros([fm_size, fm_size, 6])
         # 7*7的网格，每格做一次1分类（1种目标）+4偏移量回归+1置信度
         df = pd.read_csv(csv_path)
 
@@ -168,7 +169,7 @@ class SequenceForAirplanes(Sequence):
             w = (xmax - xmin) / image_w
             h = (ymax - ymin) / image_h
             # 获取归一化高宽
-            loc = [7 * x, 7 * y]
+            loc = [fm_size * x, fm_size * y]
             # 找到该中心坐标映射到网格图后相对所在网格的偏移量
             loc_i = int(loc[1])
             loc_j = int(loc[0])
@@ -197,10 +198,5 @@ class SequenceForAirplanes(Sequence):
 
         X = np.array(images)
         y = np.array(labels)
-
-        # print(
-        #     "Person类占该batch总目标个数比例：",
-        #     np.count_nonzero(y[:, :, :, 14]) / np.count_nonzero(y[:, :, :, 0:20])
-        # )
 
         return X, y

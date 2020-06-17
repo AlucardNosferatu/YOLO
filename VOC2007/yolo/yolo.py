@@ -1,5 +1,6 @@
 import tensorflow.keras.backend as K
-
+import numpy as np
+import tensorflow as tf
 from utils import X_Y_W_H_To_Min_Max
 
 
@@ -20,7 +21,7 @@ def iou(pred_mins, pred_maxes, true_mins, true_maxes):
     return iou_scores
 
 
-def yolo_head(feats, img_size=448):
+def yolo_head(feats, img_size=448, forTrue=True):
     # Dynamic implementation of conv dims for fully convolutional model.
     conv_dims = K.shape(feats)[1:3]  # assuming channels last
     # In YOLO the height index is the inner most iteration.
@@ -39,8 +40,29 @@ def yolo_head(feats, img_size=448):
 
     conv_dims = K.cast(K.reshape(conv_dims, [1, 1, 1, 1, 2]), K.dtype(feats))
 
-    box_xy = (feats[..., :2] + conv_index) / conv_dims * img_size
-    box_wh = feats[..., 2:4] * img_size
+    if forTrue:
+        box_xy = (feats[..., :2] + conv_index) / conv_dims * img_size
+        box_wh = feats[..., 2:4] * img_size
+    else:
+        # 采用RPN输出后预测值格式发生改变
+        # x和y为相对网格中心偏移量
+        # conv_index + 0.5为网格中心在特征图中的坐标
+        # box_edge_size为网格投射到原图的边长
+        conv_dims = tf.squeeze(conv_dims)
+        box_edge_size = img_size / conv_dims[0]
+        conv_dims = tf.cast(conv_dims, tf.int32)
+        conv_index = conv_index + 0.5
+        box_xy = (feats[..., :2] + conv_index) * box_edge_size
+
+        anchor_box_ratios = K.constant(np.array([[0.5, 1, 2]]))
+        anchor_box_scales = tf.expand_dims(tf.stack([0.5 * box_edge_size, box_edge_size, 1.5 * box_edge_size]), axis=0)
+        anchor_w = K.flatten(tf.matmul(anchor_box_ratios, anchor_box_scales, True, False))
+        anchor_box_ratios = K.reverse(anchor_box_ratios, axes=-1)
+        anchor_h = K.flatten(tf.matmul(anchor_box_ratios, anchor_box_scales, True, False))
+        anchor_w_h = tf.stack([anchor_w, anchor_h], axis=-1)
+        anchor_w_h = tf.expand_dims(tf.expand_dims(tf.expand_dims(anchor_w_h, axis=0), axis=0), axis=0)
+        anchor_w_h = tf.tile(anchor_w_h, [K.shape(feats)[0], conv_dims[0], conv_dims[0], 1, 1])
+        box_wh = feats[..., 2:4] * anchor_w_h
 
     return box_xy, box_wh
 
