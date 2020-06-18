@@ -16,7 +16,8 @@ def iou(pred_mins, pred_maxes, true_mins, true_maxes):
     true_areas = true_wh[..., 0] * true_wh[..., 1]
 
     union_areas = pred_areas + true_areas - intersect_areas
-    iou_scores = intersect_areas / union_areas
+
+    iou_scores = tf.math.truediv(intersect_areas, union_areas)
 
     return iou_scores
 

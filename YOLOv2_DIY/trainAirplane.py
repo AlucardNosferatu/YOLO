@@ -1,9 +1,10 @@
 import os
+import sys
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras import Model
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.layers import Input, Dense, BatchNormalization, Conv2D
+from tensorflow.keras.layers import Input, Dense, BatchNormalization, Conv2D, Reshape
 from tensorflow.keras.callbacks import ModelCheckpoint
 
 from VOC2007.yolo.yolo import yolo_head, iou
@@ -84,6 +85,7 @@ def yolo_loss(y_true, y_pred):
 
 
 def yolo_loss_v2(y_true, y_pred):
+    diff_th = 1e-6
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred, tf.float32)
     # V2专用的loss计算函数
@@ -134,18 +136,42 @@ def yolo_loss_v2(y_true, y_pred):
     # ? * 28 * 28 * 9 * 1 * 2, ? * 28 * 28 * 9 * 1 * 2
 
     iou_scores = iou(predict_xy_min, predict_xy_max, label_xy_min, label_xy_max)  # ? * 28 * 28 * 9 * 1
-    best_ious = K.max(iou_scores, axis=4)  # ? * 7 * 7 * 2
-    best_box = K.max(best_ious, axis=3, keepdims=True)  # ? * 7 * 7 * 1
+    iou_scores = K.squeeze(iou_scores, axis=-1)  # ? * 28 * 28 * 9
+    iou_scores = tf.where(tf.math.is_nan(iou_scores), K.zeros_like(iou_scores), iou_scores)
 
-    box_mask = K.cast(best_ious >= best_box, K.dtype(best_ious))  # ? * 7 * 7 * 2
+    K.print_tensor("")
+    K.print_tensor("iou_scores")
+    K.print_tensor(K.sum(iou_scores))
 
-    no_object_loss = (1 - box_mask * response_mask) * K.square(0 - predict_trust)
-    object_loss = box_mask * response_mask * K.square(1 - predict_trust)
+    best_box = K.max(iou_scores, axis=3, keepdims=True)  # ? * 28 * 28 * 1
+    # 每个网格中IoU最大的那一个锚框
+    box_mask = K.cast(iou_scores >= best_box, K.dtype(iou_scores))  # ? * 28 * 28 * 2
+    # 各网格中IoU最大的锚框为1，其它为0
+
+    true_box_conf = iou_scores * response_mask
+    diff = true_box_conf - predict_trust
+    diff = tf.where(K.abs(diff) < diff_th, tf.ones_like(diff_th) * diff_th, diff)
+    conf_diff = K.square(diff)
+
+    no_object_loss = (1 - response_mask) * K.cast((iou_scores < 0.6), K.dtype(response_mask))
+    object_loss = 5 * response_mask
+    no_object_loss = no_object_loss * conf_diff
+
+    object_loss = object_loss * conf_diff
+
+    # no_object_loss = (1 - box_mask * response_mask) * K.square(0 - predict_trust)
+    # object_loss = 5 * (box_mask * response_mask) * K.square(1 - predict_trust)
+
+    # predict_trust是指对应网格9个锚框哪个有目标存在
+    # 1 - predict_trust将0和1互换，指对应网格哪个是背景
+    # response_mask是标签网格是否有目标存在，存在则为1
+    # (box_mask * response_mask)确定有目标存在的对应的锚框为1
+
     # K.print_tensor("")
-    # K.print_tensor("no_object_loss")
-    # K.print_tensor(K.sum(no_object_loss))
     # K.print_tensor("object_loss")
     # K.print_tensor(K.sum(object_loss))
+    # K.print_tensor("no_object_loss")
+    # K.print_tensor(K.sum(no_object_loss))
 
     confidence_loss = no_object_loss + object_loss
     confidence_loss = K.sum(confidence_loss)
@@ -166,8 +192,8 @@ def yolo_loss_v2(y_true, y_pred):
     box_mask = K.expand_dims(box_mask)
     response_mask = K.expand_dims(response_mask)
 
-    box_loss = 5 * box_mask * response_mask * K.square((label_xy - predict_xy) / image_size)
-    box_loss += 5 * box_mask * response_mask * K.square((K.sqrt(label_wh) - K.sqrt(predict_wh)) / image_size)
+    box_loss = box_mask * response_mask * K.square((label_xy - predict_xy) / image_size)
+    box_loss += box_mask * response_mask * K.square((K.sqrt(label_wh) - K.sqrt(predict_wh)) / image_size)
     box_loss = K.sum(box_loss)
     # K.print_tensor("")
     # K.print_tensor("Conf Loss")
@@ -214,7 +240,7 @@ def ChangeInputSize():
 
 def UseAnchor():
     k = 9
-    model_path = "..\\TrainedModels\\YOLOv2-448X448.hdf5"
+    model_path = "../TrainedModels/YOLOv2-448X448-BN.hdf5"
     previous_model = tf.keras.models.load_model(
         model_path,
         custom_objects={
@@ -247,9 +273,9 @@ def UseAnchor():
         name="scores1"
     )(convolution_3x3)
     output_class = Conv2D(
-        filters=1,
+        filters=1 * k,
         kernel_size=(1, 1),
-        activation="softmax",
+        activation="sigmoid",
         kernel_initializer="uniform",
         name="scores2"
     )(convolution_3x3)
@@ -266,12 +292,12 @@ def UseAnchor():
         expand_nested=False,
         dpi=96
     )
-    v2.save('..\\TrainedModels\\YOLOv2-448X448-RPN.hdf5')
+    v2.save('..\\TrainedModels\\YOLOv2-448X448-BN-RPN.hdf5')
     print("Done")
 
 
 def AddBatchNorm(BN_count=100):
-    model_path = "..\\TrainedModels\\YOLOv2-448X448.hdf5"
+    model_path = "../TrainedModels/YOLOv2-448X448.hdf5"
 
     previous_model = tf.keras.models.load_model(
         model_path,
@@ -308,7 +334,7 @@ def AddBatchNorm(BN_count=100):
 
 
 def trainV2():
-    weights_path = '..\\TrainedModels\\YOLOv2-448X448-RPN.hdf5'
+    weights_path = '../TrainedModels/YOLOv2-448X448-BN-RPN.hdf5'
 
     # region With BN
     # weights_path = '..\\TrainedModels\\YOLOv2-448X448-BN.hdf5'
@@ -340,12 +366,12 @@ def trainV2():
         expand_nested=False,
         dpi=96
     )
-    model.compile(loss=yolo_loss_v2, optimizer=Adam(lr=0.0001))
+    model.compile(loss=yolo_loss_v2, optimizer=Adam(lr=0.00001))
     input_shape = tuple(model.input.shape[1:])
     train_generator = SequenceForAirplanes(
-        'train', annotation_path, img_path, input_shape, 1)
+        'train', annotation_path, img_path, input_shape, 8)
     validation_generator = SequenceForAirplanes(
-        'val', annotation_path, img_path, input_shape, 1)
+        'val', annotation_path, img_path, input_shape, 8)
     save_dir = '../checkpoints'
     weights_path = os.path.join(save_dir, 'YOLOv2.hdf5')
     early_stopping = tf.keras.callbacks.EarlyStopping(
@@ -380,3 +406,4 @@ if __name__ == '__main__':
     # ChangeInputSize()
     trainV2()
     # UseAnchor()
+    # AddBatchNorm(BN_count=10)

@@ -5,9 +5,8 @@ import numpy as np
 import tensorflow as tf
 
 from VOC2007.tiny_yolov1 import YOLO_head, iou
-from VOC2007.yolo.yolo import yolo_head
 from YOLOv1.trainAirplane import ReshapeYOLO, annotation_path, img_path
-from YOLOv2.trainAirplane import yolo_loss, yolo_loss_v2
+from YOLOv2_DIY.trainAirplane import yolo_loss, yolo_loss_v2
 from data_sequence import SequenceForAirplanes
 from utils import load_img, X_Y_W_H_To_Min_Max
 
