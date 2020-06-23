@@ -63,6 +63,7 @@ def yolo_head(feats, img_size=448, forTrue=True):
         anchor_w_h = tf.stack([anchor_w, anchor_h], axis=-1)
         anchor_w_h = tf.expand_dims(tf.expand_dims(tf.expand_dims(anchor_w_h, axis=0), axis=0), axis=0)
         anchor_w_h = tf.tile(anchor_w_h, [K.shape(feats)[0], conv_dims[0], conv_dims[0], 1, 1])
+
         box_wh = feats[..., 2:4] * anchor_w_h
 
     return box_xy, box_wh
