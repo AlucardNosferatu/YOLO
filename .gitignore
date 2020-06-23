@@ -4,3 +4,5 @@
 Data/Airplanes_Annotations/
 TensorBoard/train/
 TensorBoard/validation/
+YOLOv2_ZY/model/
+YOLOv2_ZY/data/airplane/

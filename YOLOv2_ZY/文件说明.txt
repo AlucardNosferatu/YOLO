@@ -1,0 +1,19 @@
+data目录:
+	airplane  飞机的训练数据和label
+	kangaroo
+	test_data 飞机的测试数据
+	
+model目录
+	pre_yolov2.weight 				是yolov2的预训练权重,yolo官网有下载(原github上我换了马甲而已,改名)
+	yolov2_airplane_9_800.h5 		请无视,训练结果很差,这个是vgg16+9个anchor训练的
+	yolov2_airplane_yolo2weight.h5 	纯yolo2+5个聚类训练的权重,目前交付的版本
+	
+output目录
+	测试输出的文件图片
+
+	
+airplane_tfrecord.py  				运行该文件 得到train和label的文件(data/airplane/train_airplane.tfrecord) 方便给网络喂数据
+test_vgg16.py						请无视
+test_yolo2.py						测试运行主入口
+vgg16_yolo2_9_800.py				请无视	
+yolov2_pro.py						训练参数的主入口,yolo2骨架		
