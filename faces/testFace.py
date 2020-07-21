@@ -6,27 +6,45 @@ from tiny_yolov1 import YOLO_head, iou
 from airplanes.trainAirplane import model_tiny_YOLOv1
 from utils import X_Y_W_H_To_Min_Max, load_img
 
-classes_name = ['aeroplane']
+classes_name = ['face']
 
 
 class TinyYOLOv1(object):
     def __init__(self, weights_path):
         self.weights_path = weights_path
-        self.classes_name = ['aeroplane']
+        self.classes_name = ['face']
         outputs, inputs = model_tiny_YOLOv1()
         self.model = Model(inputs=inputs, outputs=outputs)
         self.model.load_weights(self.weights_path, by_name=True)
         self.inputs = inputs
 
-    def predict(self, input_path):
+    def predict_path(self, input_path):
         image, _, _ = load_img(path=input_path, shape=self.inputs.shape[1:])
         image = np.expand_dims(image, axis=0)
         y = self.model.predict(image, batch_size=1)
         return y
 
+    def predict_snap(self, input_snap):
+        shape = self.inputs.shape[1:]
+        if type(shape) is not tuple:
+            shape = tuple(shape)
+        if len(shape) < 3:
+            shape = shape + (3,)
+        image = input_snap
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.resize(image, shape[:2])
+        image = np.reshape(image, shape)
+        image = image / 255.
+        image = np.expand_dims(image, axis=0)
+        y = self.model.predict(image, batch_size=1)
+        return y
 
-def _main(image_path, tiny_YOLO_v1):
-    prediction = tiny_YOLO_v1.predict_path(image_path)
+
+def _main(image_instance, tiny_YOLO_v1, snap=False):
+    if snap:
+        prediction = tiny_YOLO_v1.predict_snap(image_instance)
+    else:
+        prediction = tiny_YOLO_v1.predict_path(image_instance)
 
     predict_class = prediction[..., :1]  # 1 * 7 * 7 * 20
     predict_trust = prediction[..., 1:3]  # 1 * 7 * 7 * 2
@@ -88,7 +106,10 @@ def _main(image_path, tiny_YOLO_v1):
     box_xy_min *= nms_mask
     box_xy_max *= nms_mask
 
-    image = cv2.imread(image_path)
+    if snap:
+        image = image_instance
+    else:
+        image = cv2.imread(image_instance)
     origin_shape = image.shape[0:2]
     image = cv2.resize(image, (224, 224))
     detect_shape = filter_mask.shape
@@ -106,16 +127,39 @@ def _main(image_path, tiny_YOLO_v1):
 
     image = cv2.resize(image, (origin_shape[1], origin_shape[0]))
     cv2.imshow('image', image)
-    cv2.imwrite('YOLOv1-' + image_path.split("\\")[-1], image)
-    cv2.waitKey(0)
+    if snap:
+        pass
+    else:
+        cv2.imwrite('YOLOv1-' + image_instance.split("\\")[-1], image)
+        cv2.waitKey(0)
+
+
+def test_images():
+    years = ['2002', '2003']
+    months = ['07', '08']
+    dates = [str(i) for i in range(19, 29)]
+    tyv1 = TinyYOLOv1('faces-tiny-yolov1.hdf5')
+    for year in years:
+        for month in months:
+            for date in dates:
+                path = 'C:/BaiduNetdiskDownload/originalPics/' + year + '/' + month + '/' + date + '/big'
+                for e, i in enumerate(os.listdir(path)):
+                    _main(
+                        image_instance=os.path.join(path, i),
+                        tiny_YOLO_v1=tyv1
+                    )
 
 
 if __name__ == '__main__':
-    path = 'Data\\Images'
-    tyv1 = TinyYOLOv1('airplanes-tiny-yolov1.hdf5')
-    for e, i in enumerate(os.listdir(path)):
-        if i.startswith("airplane"):
-            _main(
-                image_path=os.path.join(path, i),
-                tiny_YOLO_v1=tyv1
-            )
+    tyv1 = TinyYOLOv1('faces-tiny-yolov1.hdf5')
+    sample = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
+    while sample.isOpened():
+        ret, frame = sample.read()
+        if frame is not None:
+            _main(image_instance=frame,tiny_YOLO_v1=tyv1,snap=True)
+        k = cv2.waitKey(50)
+        if k & 0xff == ord('q'):
+            break
+        # endregion
+    sample.release()
+    cv2.destroyAllWindows()
