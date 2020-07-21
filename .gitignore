@@ -4,3 +4,7 @@
 Data/Airplanes_Annotations/
 TensorBoard/train/
 TensorBoard/validation/
+YOLOv2/data/kangaroo/
+YOLOv2_ZY/data/airplane/
+*.h5
+*.tfrecord
