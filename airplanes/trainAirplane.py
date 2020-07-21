@@ -134,7 +134,7 @@ def _main():
     model.compile(loss=yolo_loss, optimizer='adam')
     tf.keras.utils.plot_model(
         model,
-        to_file='model.png',
+        to_file='../model.png',
         show_shapes=True,
         show_layer_names=False,
         rankdir='TB',

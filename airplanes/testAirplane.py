@@ -1,10 +1,9 @@
-import argparse
 import os
 import cv2
 import numpy as np
 from tensorflow.keras import Model
 from tiny_yolov1 import YOLO_head, iou
-from trainAirplane import model_tiny_YOLOv1
+from airplanes.trainAirplane import model_tiny_YOLOv1
 from utils import X_Y_W_H_To_Min_Max, load_img
 
 classes_name = ['aeroplane']

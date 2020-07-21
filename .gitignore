@@ -8,3 +8,6 @@ YOLOv2/data/kangaroo/
 YOLOv2_ZY/data/airplane/
 *.h5
 *.tfrecord
+Data/Faces_Annotations/train/
+Data/Faces_Annotations/val/
+faces/TensorBoard/
