@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import datetime
 from tensorflow.keras import Model
 from tiny_yolov1 import YOLO_head, iou
 from airplanes.trainAirplane import model_tiny_YOLOv1
@@ -113,14 +114,35 @@ def _main(image_instance, tiny_YOLO_v1, snap=False):
     origin_shape = image.shape[0:2]
     image = cv2.resize(image, (224, 224))
     detect_shape = filter_mask.shape
-
     for i in range(detect_shape[0]):
         for j in range(detect_shape[1]):
             for k in range(detect_shape[2]):
                 if nms_mask[i, j, k, 0]:
-                    cv2.rectangle(image, (int(box_xy_min[i, j, k, 0]), int(box_xy_min[i, j, k, 1])),
-                                  (int(box_xy_max[i, j, k, 0]), int(box_xy_max[i, j, k, 1])),
-                                  (0, 0, 255))
+                    x1 = int(box_xy_min[i, j, k, 0])
+                    y1 = int(box_xy_min[i, j, k, 1])
+                    x2 = int(box_xy_max[i, j, k, 0])
+                    y2 = int(box_xy_max[i, j, k, 1])
+                    if snap:
+                        modified_x1 = max(0, x1 - 20)
+                        modified_y1 = max(0, y1 - 20)
+                        modified_x2 = min(image.shape[1] - 1, x2 + 20)
+                        modified_y2 = min(image.shape[0] - 1, y2 + 20)
+                        captured = image.copy()[modified_y1:modified_y2, modified_x1:modified_x2]
+                        # cv2.imshow('224*224', image)
+                        # cv2.imshow('cap_224*224', captured)
+                        captured = cv2.resize(
+                            captured,
+                            (
+                                int(captured.shape[1] * origin_shape[1] / 224),
+                                int(captured.shape[0] * origin_shape[0] / 224)
+                            )
+                        )
+                    cv2.rectangle(
+                        image,
+                        (x1, y1),
+                        (x2, y2),
+                        (0, 0, 255)
+                    )
                     cv2.putText(image, classes_name[box_classes[i, j, k, 0]],
                                 (int(box_xy_min[i, j, k, 0]), int(box_xy_min[i, j, k, 1])),
                                 1, 1, (0, 0, 255))
@@ -128,10 +150,14 @@ def _main(image_instance, tiny_YOLO_v1, snap=False):
     image = cv2.resize(image, (origin_shape[1], origin_shape[0]))
     cv2.imshow('image', image)
     if snap:
-        pass
+        if captured is not None and captured.shape[0] > 0 and captured.shape[1] > 0:
+            return captured
+        else:
+            return None
     else:
         cv2.imwrite('YOLOv1-' + image_instance.split("\\")[-1], image)
         cv2.waitKey(0)
+        return None
 
 
 def test_images():
@@ -156,10 +182,16 @@ if __name__ == '__main__':
     while sample.isOpened():
         ret, frame = sample.read()
         if frame is not None:
-            _main(image_instance=frame,tiny_YOLO_v1=tyv1,snap=True)
+            cap = _main(image_instance=frame, tiny_YOLO_v1=tyv1, snap=True)
+            if cap is not None:
+                cv2.imshow('cap', cap)
         k = cv2.waitKey(50)
         if k & 0xff == ord('q'):
             break
+        elif k & 0xff == ord('c'):
+            if cap is not None:
+                time = datetime.datetime.now()
+                cv2.imwrite('YOLOv1-' + str(time.minute) + '-' + str(time.microsecond) + '.png', cap)
         # endregion
     sample.release()
     cv2.destroyAllWindows()
