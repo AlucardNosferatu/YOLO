@@ -11,3 +11,4 @@ YOLOv2_ZY/data/airplane/
 Data/Faces_Annotations/train/
 Data/Faces_Annotations/val/
 faces/TensorBoard/
+faces/Faces/
