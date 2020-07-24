@@ -1,7 +1,8 @@
 import os
 import cv2
-import numpy as np
 import datetime
+import numpy as np
+import tensorflow as tf
 from tensorflow.keras import Model
 from tiny_yolov1 import YOLO_head, iou
 from airplanes.trainAirplane import model_tiny_YOLOv1
@@ -46,7 +47,7 @@ def _main(image_instance, tiny_YOLO_v1, snap=False):
         prediction = tiny_YOLO_v1.predict_snap(image_instance)
     else:
         prediction = tiny_YOLO_v1.predict_path(image_instance)
-
+    captured = None
     predict_class = prediction[..., :1]  # 1 * 7 * 7 * 20
     predict_trust = prediction[..., 1:3]  # 1 * 7 * 7 * 2
     predict_box = prediction[..., 3:]  # 1 * 7 * 7 * 8
@@ -80,6 +81,7 @@ def _main(image_instance, tiny_YOLO_v1, snap=False):
     predict_trust *= filter_mask  # 7 * 7 * 2 * 1
     nms_mask = np.zeros_like(filter_mask)  # 7 * 7 * 2 * 1
     predict_trust_max = np.max(predict_trust)  # 找到置信度最高的框
+    score = predict_trust.copy()
     max_i = max_j = max_k = 0
     while predict_trust_max > 0:
         for i in range(nms_mask.shape[0]):
@@ -113,6 +115,7 @@ def _main(image_instance, tiny_YOLO_v1, snap=False):
         image = cv2.imread(image_instance)
     origin_shape = image.shape[0:2]
     image = cv2.resize(image, (224, 224))
+    image_copy = image.copy()
     detect_shape = filter_mask.shape
     for i in range(detect_shape[0]):
         for j in range(detect_shape[1]):
@@ -122,12 +125,12 @@ def _main(image_instance, tiny_YOLO_v1, snap=False):
                     y1 = int(box_xy_min[i, j, k, 1])
                     x2 = int(box_xy_max[i, j, k, 0])
                     y2 = int(box_xy_max[i, j, k, 1])
-                    if snap:
+                    if snap and score[i, j, k, 0] > 0.95:
                         modified_x1 = max(0, x1 - 20)
                         modified_y1 = max(0, y1 - 20)
                         modified_x2 = min(image.shape[1] - 1, x2 + 20)
                         modified_y2 = min(image.shape[0] - 1, y2 + 20)
-                        captured = image.copy()[modified_y1:modified_y2, modified_x1:modified_x2]
+                        captured = image_copy[modified_y1:modified_y2, modified_x1:modified_x2]
                         # cv2.imshow('224*224', image)
                         # cv2.imshow('cap_224*224', captured)
                         captured = cv2.resize(
@@ -143,7 +146,10 @@ def _main(image_instance, tiny_YOLO_v1, snap=False):
                         (x2, y2),
                         (0, 0, 255)
                     )
-                    cv2.putText(image, classes_name[box_classes[i, j, k, 0]],
+                    # cv2.putText(image, classes_name[box_classes[i, j, k, 0]],
+                    #             (int(box_xy_min[i, j, k, 0]), int(box_xy_min[i, j, k, 1])),
+                    #             1, 1, (0, 0, 255))
+                    cv2.putText(image, str(score[i, j, k, 0]),
                                 (int(box_xy_min[i, j, k, 0]), int(box_xy_min[i, j, k, 1])),
                                 1, 1, (0, 0, 255))
 
@@ -178,13 +184,18 @@ def test_images():
 
 if __name__ == '__main__':
     tyv1 = TinyYOLOv1('faces-tiny-yolov1.hdf5')
+    rec = tf.keras.models.load_model(
+        'C:\\Users\\16413\\Desktop\\FFCS\\SVN\\CV_Toolbox\\SmartServerRoom\\Models\\Classifier.h5'
+    )
     sample = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
     while sample.isOpened():
         ret, frame = sample.read()
         if frame is not None:
             cap = _main(image_instance=frame, tiny_YOLO_v1=tyv1, snap=True)
             if cap is not None:
-                cv2.imshow('cap', cap)
+                cap = cv2.resize(cap, (224, 224)) / 255
+                result = rec.predict(np.expand_dims(cap, axis=0))
+                cv2.imshow(str(np.argmax(result[0])), cap)
         k = cv2.waitKey(50)
         if k & 0xff == ord('q'):
             break
