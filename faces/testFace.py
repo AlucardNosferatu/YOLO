@@ -182,20 +182,30 @@ def test_images():
                     )
 
 
-if __name__ == '__main__':
+def test_cam():
     tyv1 = TinyYOLOv1('faces-tiny-yolov1.hdf5')
     rec = tf.keras.models.load_model(
         'C:\\Users\\16413\\Desktop\\FFCS\\SVN\\CV_Toolbox\\SmartServerRoom\\Models\\Classifier.h5'
     )
     sample = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
+    # url = "http://admin:admin@10.78.50.12:8081"
+    # sample = cv2.VideoCapture(url)
     while sample.isOpened():
         ret, frame = sample.read()
+        slide_window = []
         if frame is not None:
             cap = _main(image_instance=frame, tiny_YOLO_v1=tyv1, snap=True)
             if cap is not None:
                 cap = cv2.resize(cap, (224, 224)) / 255
                 result = rec.predict(np.expand_dims(cap, axis=0))
-                cv2.imshow(str(np.argmax(result[0])), cap)
+                result = np.argmax(result[0])
+                slide_window.append(result)
+                if len(slide_window) > 50:
+                    slide_window.pop(0)
+                sum_sw = sum(slide_window)
+                mean = sum_sw / len(slide_window)
+                int_mean = int(mean)
+                cv2.imshow(str(int_mean), cap)
         k = cv2.waitKey(50)
         if k & 0xff == ord('q'):
             break
@@ -206,3 +216,7 @@ if __name__ == '__main__':
         # endregion
     sample.release()
     cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    test_cam()
