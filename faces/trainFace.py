@@ -7,13 +7,13 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.layers import Layer, Dense
 from tensorflow.keras.optimizers import Adam
 
-from data_sequence import SequenceForFaces
+from data_sequence import SequenceForFaces, SequenceForCelebA
 from utils import X_Y_W_H_To_Min_Max
 from yolo.yolo import iou, yolo_head
 
-data_path = "../Data"
-annotation_path = os.path.join(data_path, "Faces_Annotations")
-img_path = 'C:\\BaiduNetdiskDownload\\originalPics'
+data_path = "D:\\BaiduNetdiskDownload\\15_Ce.leb.Faces Att.ribu.tes Da.ta.set (CelebA)\\Anno"
+annotation_path = os.path.join(data_path, "list_bbox_celeba.txt")
+img_path = 'D:\\BaiduNetdiskDownload\\img_celeba'
 batch_size = 8
 epochs = 100
 
@@ -174,9 +174,9 @@ def _main():
         write_graph=True,
         write_images=True
     )
-    train_generator = SequenceForFaces(
+    train_generator = SequenceForCelebA(
         'train', annotation_path, img_path, input_shape, batch_size)
-    validation_generator = SequenceForFaces(
+    validation_generator = SequenceForCelebA(
         'val', annotation_path, img_path, input_shape, int(batch_size / 2))
 
     with tf.device('/gpu:0'):
